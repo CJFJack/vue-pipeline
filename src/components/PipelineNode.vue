@@ -1,12 +1,19 @@
 <template>
-  <g :transform="'translate('+x+','+y+')'" :class="nodeClass" cursor="pointer" @click="handleClick" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
+  <g :transform="'translate('+x+','+y+')'" :class="nodeClass" cursor="pointer" @click="handleClick"
+    @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
 
     <pipeline-node-start v-if="status=='start'" :label="label" />
     <pipeline-node-end v-if="status=='end'" :label="label" />
 
     <g v-if="status!=='start' && status!=='end'">
       <g>
-        <text :x="getText().x" :y="getText().y" class="pipeline-node-label">{{getText().text}}</text>
+        <!-- <text :x="getText().x" :y="getText().y" class="pipeline-node-label">{{getText().text}}</text> -->
+        <foreignObject :x="getText().x" :y="15" height="500" class="pipeline-node-label">
+
+          <body xmlns="http://www.w3.org/1999/xhtml">
+            <div v-html="label"></div>
+          </body>
+        </foreignObject>
         <title>{{label}}</title>
       </g>
       <g class="svgResultStatus">
@@ -49,139 +56,150 @@
   </g>
 </template>
 <script>
-import stringWidth from 'string-width'
-import PipelineNodeStart from './PipelineNodeStart'
-import PipelineNodeEnd from './PipelineNodeEnd'
-export default {
-  components: {
-    PipelineNodeStart,
-    PipelineNodeEnd
-  },
-  props: {
-    index: {
-      type: Number
+  import stringWidth from 'string-width'
+  import PipelineNodeStart from './PipelineNodeStart'
+  import PipelineNodeEnd from './PipelineNodeEnd'
+  export default {
+    components: {
+      PipelineNodeStart,
+      PipelineNodeEnd
     },
-    hint: {
-      type: String
+    props: {
+      index: {
+        type: Number
+      },
+      hint: {
+        type: String
+      },
+      status: {
+        type: String
+      },
+      label: {
+        type: String
+      },
+      x: {
+        type: Number
+      },
+      y: {
+        type: Number
+      },
+      node: {
+        type: Object
+      },
+      selected: {
+        type: Boolean,
+        default: false
+      }
     },
-    status: {
-      type: String
-    },
-    label: {
-      type: String
-    },
-    x: {
-      type: Number
-    },
-    y: {
-      type: Number
-    },
-    node: {
-      type: Object
-    },
-    selected: {
-      type: Boolean,
-      default: false
-    }
-  },
-  data() {
-    return {
-      nodeClass: 'pipeline-node'
-    }
-  },
-  methods: {
-    getText() {
-      let maxLength = 14
-      let text =
-        this.label.length > maxLength
-          ? this.label.substring(0, maxLength) + '...'
-          : this.label
-      let width = stringWidth(text)
+    data() {
       return {
-        x: -width * 2.7,
-        y: -20,
-        text
+        nodeClass: 'pipeline-node'
       }
     },
-    handleClick() {
-      // console.log("click", this.node);
-      this.nodeClass = 'pipeline-node-selected'
-      if (this.status != 'start' && this.status != 'end') {
-        this.$emit('click', this.index, this.node)
+    methods: {
+      getText() {
+        let maxLength = 14
+        let text =
+          this.label.length > maxLength ?
+          this.label.substring(0, maxLength) + '...' :
+          this.label
+        let width = stringWidth(text)
+        return {
+          x: -width * 2.7,
+          y: -20,
+          text
+        }
+      },
+      handleClick() {
+        // console.log("click", this.node);
+        this.nodeClass = 'pipeline-node-selected'
+        if (this.status != 'start' && this.status != 'end') {
+          this.$emit('click', this.index, this.node)
+        }
+      },
+      handleMouseEnter() {
+        this.nodeClass = 'pipeline-node-selected'
+        this.$emit('mouseenter', this.index, this.node)
+      },
+      handleMouseLeave() {
+        this.nodeClass = 'pipeline-node'
+        this.$emit('mouseleave', this.index, this.node)
+      },
+      getTextWidth(text, font) {
+        // re-use canvas object for better performance
+        var canvas =
+          this.getTextWidth.canvas ||
+          (this.getTextWidth.canvas = document.createElement('canvas'))
+        var context = canvas.getContext('2d')
+        context.font = font
+        var metrics = context.measureText(text)
+        return metrics.width
       }
-    },
-    handleMouseEnter() {
-      this.nodeClass = 'pipeline-node-selected'
-      this.$emit('mouseenter', this.index, this.node)
-    },
-    handleMouseLeave() {
-      this.nodeClass = 'pipeline-node'
-      this.$emit('mouseleave', this.index, this.node)
-    },
-    getTextWidth(text, font) {
-      // re-use canvas object for better performance
-      var canvas =
-        this.getTextWidth.canvas ||
-        (this.getTextWidth.canvas = document.createElement('canvas'))
-      var context = canvas.getContext('2d')
-      context.font = font
-      var metrics = context.measureText(text)
-      return metrics.width
     }
   }
-}
+
 </script>
 <style lang="css">
-.pipeline-node-selected .svgResultStatus > circle {
-  stroke: none;
-}
+  .pipeline-node-selected .svgResultStatus>circle {
+    stroke: none;
+  }
 
-.svgResultStatus {
-  transform: translateZ(0);
-}
-.svgResultStatus > circle {
-  stroke: white;
-  stroke-width: 2px;
-}
-.svgResultStatus > circle.success {
-  fill: #8cc04f;
-}
-.svgResultStatus > circle.failure {
-  fill: #d54c53;
-}
-.svgResultStatus > circle.unstable {
-  fill: #f6b44b;
-}
-.svgResultStatus > circle.aborted {
-  fill: #949393;
-}
-.svgResultStatus > circle.paused {
-  fill: #24b0d5;
-}
-.svgResultStatus > circle.unknown {
-  fill: #d54cc4;
-}
-.svgResultStatus > circle.running {
-  fill: #fff;
-}
+  .svgResultStatus {
+    transform: translateZ(0);
+  }
 
-.pipeline-node-label {
-  font: 12px sans-serif;
-  font-size: 12px;
-  /* fill: red; */
-  width: 100px;
-  overflow: hidden;
-  overflow-wrap: break-word;
-  /* top: 140px; */
-  /* left: 339px; */
-  position: absolute;
-  width: 89px;
-  /* max-height: 39px; */
-  text-align: center;
-}
-.running {
-  fill: #8ccc4f;
-  animation: rotating 2s linear infinite;
-  animation-iteration-count: infinite;
-}
+  .svgResultStatus>circle {
+    stroke: white;
+    stroke-width: 2px;
+  }
+
+  .svgResultStatus>circle.success {
+    fill: #8cc04f;
+  }
+
+  .svgResultStatus>circle.failure {
+    fill: #d54c53;
+  }
+
+  .svgResultStatus>circle.unstable {
+    fill: #f6b44b;
+  }
+
+  .svgResultStatus>circle.aborted {
+    fill: #949393;
+  }
+
+  .svgResultStatus>circle.paused {
+    fill: #24b0d5;
+  }
+
+  .svgResultStatus>circle.unknown {
+    fill: #d54cc4;
+  }
+
+  .svgResultStatus>circle.running {
+    fill: #fff;
+  }
+
+  .pipeline-node-label {
+    font: 12px sans-serif;
+    font-size: 12px;
+    /* fill: red; */
+    /* width: 100px; */
+    overflow: hidden;
+    overflow-wrap: break-word;
+    /* top: 140px; */
+    /* left: 339px; */
+    position: absolute;
+    width: 150px;
+    /* max-height: 39px; */
+    text-align: left;
+  }
+
+  .running {
+    fill: #8ccc4f;
+    animation: rotating 2s linear infinite;
+    animation-iteration-count: infinite;
+  }
+
 </style>
